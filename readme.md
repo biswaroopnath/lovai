@@ -54,7 +54,3 @@ Use the `tts_service_gen.py` script to generate cloned voices. See its documenta
 ## Contributing
 
 Feel free to open issues or submit pull requests for improvements, bug fixes, or new features.
-
-## License
-
-Specify the license under which this project is distributed (e.g., MIT).
