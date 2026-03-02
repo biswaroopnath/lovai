@@ -20,8 +20,8 @@ A lightweight voice AI application that supports text‑to‑speech, voice cloni
 
 ```bash
 # Clone the repository (if not already done)
-git clone <repo_url>
-cd fresh
+git clone https://github.com/biswaroopnath/lovai.git
+cd lovai
 # Download KoboldCpp
 # (Or manually download from: https://github.com/LostRuins/koboldcpp/releases/tag/v1.108.2)
 curl -L -o kobolcpp/koboldcpp.exe https://github.com/LostRuins/koboldcpp/releases/download/v1.108.2/koboldcpp.exe
