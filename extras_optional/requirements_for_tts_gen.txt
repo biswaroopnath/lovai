@@ -1,0 +1,25 @@
+# Core dependencies
+pocket-tts==1.1.1
+torch==2.5.1+cpu
+numpy==2.4.2
+soundfile==0.13.1
+
+# Pocket-TTS dependencies (included from freeze)
+beartype==0.22.9
+einops==0.8.2
+huggingface_hub==1.5.0
+pydantic==2.12.5
+safetensors==0.7.0
+scipy==1.17.1
+sentencepiece==0.2.1
+typer==0.24.1
+
+# Optional for API/Serving
+fastapi==0.135.1
+uvicorn==0.41.0
+python-multipart==0.0.22
+
+# Utils
+tqdm==4.67.3
+requests==2.32.5
+PyYAML==6.0.3
