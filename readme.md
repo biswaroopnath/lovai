@@ -16,7 +16,7 @@ A lightweight voice AI application that supports text‑to‑speech, voice cloni
   pip install -r requirements.txt
   ```
 
-## Installation
+## Manual-Installation
 
 ```bash
 # Clone the repository (if not already done)
@@ -27,7 +27,21 @@ cd lovai
 curl -L -o kobolcpp/koboldcpp.exe https://github.com/LostRuins/koboldcpp/releases/download/v1.108.2/koboldcpp.exe
 # Install required packages
 pip install -r requirements.txt
+# Install front-end
+cd frontend
+npm install
 ```
+
+After this download your GGUF model and keep it in **`kobolcpp/koboldcpp_gguf_models/`** folder.
+
+## Easy-Installation
+
+```bash
+# Clone the repository (if not already done)
+./install.bat
+```
+
+After this download your GGUF model and keep it in **`kobolcpp/koboldcpp_gguf_models/`** folder.
 
 ## Usage
 
