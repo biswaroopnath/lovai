@@ -1,8 +1,20 @@
 import os
 
 BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
-TEMPLATE_FILE = os.path.join(BACKEND_DIR, "default_template.txt")
-FILE_NAME = os.path.join(BACKEND_DIR, "prompt.txt")
+PROJECT_ROOT = os.path.dirname(BACKEND_DIR)
+CONFIG_PATH = os.path.join(PROJECT_ROOT, "lovai_config.json")
+
+# Load Configuration
+try:
+    with open(CONFIG_PATH, "r") as f:
+        config = json.load(f)
+except Exception as e:
+    print(f"Warning: Could not load config from {CONFIG_PATH}: {e}")
+    config = {}
+
+CHARACTER_FOLDER = config.get("character_folder", "panam")
+TEMPLATE_FILE = os.path.join(PROJECT_ROOT, "character", CHARACTER_FOLDER, "default_template.txt")
+FILE_NAME = os.path.join(PROJECT_ROOT, "character", CHARACTER_FOLDER, "prompt.txt")
 
 def get_default_template():
     """Reads the default template from default_template.txt."""

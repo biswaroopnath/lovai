@@ -15,6 +15,19 @@ from tts_service import TTSService
 from faster_whisper import WhisperModel, BatchedInferencePipeline
 from history import reset_history, update_prompt, finalize_turn
 
+# Load Configuration
+CONFIG_PATH = os.path.join(PROJECT_ROOT, "lovai_config.json")
+try:
+    with open(CONFIG_PATH, "r") as f:
+        config = json.load(f)
+except Exception as e:
+    print(f"Warning: Could not load config from {CONFIG_PATH}: {e}")
+    config = {}
+
+CHARACTER_FOLDER = config.get("character_folder", "panam")
+DEFAULT_VOICE = config.get("default_voice", "eponine")
+VOICE_CLONE = config.get("voice_clone", False)
+
 app = FastAPI()
 
 # Enable CORS for the frontend
@@ -59,7 +72,7 @@ class ChatRequest(BaseModel):
     prompt: str
     max_length: Optional[int] = 120
     temperature: Optional[float] = 0.7
-    voice: Optional[str] = "eponine"
+    voice: Optional[str] = DEFAULT_VOICE
 
 async def get_kobold_stream(payload):
     """Generator for streaming tokens from KoboldCpp with extra robustness."""
@@ -154,8 +167,10 @@ async def token_to_sentence_stream(token_generator):
 async def chat(request: ChatRequest):
     """Standard non-streaming chat proxy."""
     try:
-        payload_path = os.path.join(PROJECT_ROOT, "kobolcpp", "payload.txt")
-        prompt_path = os.path.join(BACKEND_DIR, "prompt.txt")
+        # Load character-specific payload 
+        payload_path = os.path.join(PROJECT_ROOT, "character", CHARACTER_FOLDER, "payload.json")
+       
+        prompt_path = os.path.join(PROJECT_ROOT, "character", CHARACTER_FOLDER, "prompt.txt")
 
         update_prompt(request.prompt)
 
@@ -183,7 +198,7 @@ async def chat(request: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/chat_voice")
-async def chat_voice(prompt: str, voice: str = "eponine", max_length: int = 120, temperature: float = 0.7):
+async def chat_voice(prompt: str, voice: str = DEFAULT_VOICE, max_length: int = 120, temperature: float = 0.7):
     """
     Streaming LLM + TTS for instantaneous voice response.
     Returns a stream of raw audio data (WAV) as the LLM generates tokens.
@@ -193,8 +208,10 @@ async def chat_voice(prompt: str, voice: str = "eponine", max_length: int = 120,
         raise HTTPException(status_code=500, detail="TTSService not initialized")
 
     try:
-        payload_path = os.path.join(PROJECT_ROOT, "kobolcpp", "payload.txt")
-        prompt_path = os.path.join(BACKEND_DIR, "prompt.txt")
+        # Load character-specific payload if exists, otherwise fallback
+        payload_path = os.path.join(PROJECT_ROOT, "character", CHARACTER_FOLDER, "payload.json")
+        
+        prompt_path = os.path.join(PROJECT_ROOT, "character", CHARACTER_FOLDER, "prompt.txt")
 
         # Initialize history
         update_prompt(prompt)
@@ -268,7 +285,7 @@ async def chat_voice(prompt: str, voice: str = "eponine", max_length: int = 120,
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/tts")
-async def tts(text: str, voice: str = "eponine"):
+async def tts(text: str, voice: str = DEFAULT_VOICE):
     """
     Pocket TTS endpoint.
     Processes text into speech using the TTSService.
@@ -297,7 +314,7 @@ async def tts(text: str, voice: str = "eponine"):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/tts_stream")
-async def tts_stream(text: str, voice: str = "eponine"):
+async def tts_stream(text: str, voice: str = DEFAULT_VOICE):
     """
     Pocket TTS streaming endpoint.
     Processes text into speech and streams audio chunks for low latency.
