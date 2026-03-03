@@ -204,7 +204,13 @@ async def chat_voice(prompt: str, voice: Optional[str] = None, max_length: int =
         prompt_path = paths["prompt"]
 
         if voice is None:
-            voice = config.get("default_voice", "eponine")
+            if config.get("voice_clone"):
+                voice = paths.get("sample", "eponine")
+                print(f"[ChatVoice] Voice cloning enabled. Using sample: {voice}")
+            else:
+                voice = config.get("default_voice", "eponine")
+        
+        sampling_time = config.get("sampling_time", 30.0)
 
         # Initialize history
         update_prompt(prompt)
@@ -240,7 +246,7 @@ async def chat_voice(prompt: str, voice: Optional[str] = None, max_length: int =
                     
                     chunk_in_sentence = 0
                     # We use the sync-generator within an async context
-                    for pcm_chunk in tts_service.generate_pcm_stream(sentence, voice_name=voice):
+                    for pcm_chunk in tts_service.generate_pcm_stream(sentence, voice_name=voice, sampling_time=sampling_time):
                         chunk_in_sentence += 1
                         if len(pcm_chunk) > 0:
                             yield pcm_chunk
@@ -286,9 +292,15 @@ async def tts(text: str, voice: Optional[str] = None):
     if not tts_service:
         raise HTTPException(status_code=500, detail="TTSService not initialized")
     
+    config = get_config()
+    sampling_time = config.get("sampling_time", 30.0)
+    
     if voice is None:
-        config = get_config()
-        voice = config.get("default_voice", "eponine")
+        if config.get("voice_clone"):
+            paths = get_character_paths()
+            voice = paths.get("sample", "eponine")
+        else:
+            voice = config.get("default_voice", "eponine")
     
     try:
         # Create a temporary file for the audio
@@ -296,7 +308,7 @@ async def tts(text: str, voice: Optional[str] = None):
             temp_path = tmp.name
         
         # Generate audio
-        tts_service.generate(text, voice_name=voice, output_path=temp_path)
+        tts_service.generate(text, voice_name=voice, output_path=temp_path, sampling_time=sampling_time)
         
         # Read the file and return as response
         with open(temp_path, "rb") as f:
@@ -319,13 +331,19 @@ async def tts_stream(text: str, voice: Optional[str] = None):
     if not tts_service:
         raise HTTPException(status_code=500, detail="TTSService not initialized")
     
+    config = get_config()
+    sampling_time = config.get("sampling_time", 30.0)
+
     if voice is None:
-        config = get_config()
-        voice = config.get("default_voice", "eponine")
+        if config.get("voice_clone"):
+            paths = get_character_paths()
+            voice = paths.get("sample", "eponine")
+        else:
+            voice = config.get("default_voice", "eponine")
     
     try:
         return StreamingResponse(
-            tts_service.generate_stream(text, voice_name=voice),
+            tts_service.generate_stream(text, voice_name=voice, sampling_time=sampling_time),
             media_type="audio/wav",
             headers={
                 "Content-Disposition": "inline",

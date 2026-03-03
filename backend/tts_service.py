@@ -1,3 +1,4 @@
+import os
 import torch
 import wave
 import numpy as np
@@ -5,6 +6,7 @@ from pathlib import Path
 from pocket_tts import TTSModel
 import time
 import struct
+import tempfile
 
 class TTSService:
     def __init__(self, device="cpu"):
@@ -21,24 +23,79 @@ class TTSService:
         self.device = device
         self.sample_rate = self.model.sample_rate
         self.voices = {}
+        self.cloned_voices = {} # Cache for cloned states
         print(f"Model loaded. Sample rate: {self.sample_rate}Hz")
 
-    def get_voice_state(self, voice_name="eponine"):
+    def get_voice_state(self, voice_name="eponine", sampling_time=30.0):
         """
         Get or load the state for a specific voice.
-        Predefined voices: alba, marius, javert, jean, fantine, cosette, eponine, azelma.
+        If voice_name is a path to a .wav file, it performs voice cloning.
+        Otherwise, it loads a predefined voice.
         """
+        # Check if it's a file path for cloning
+        if os.path.exists(voice_name) and voice_name.lower().endswith('.wav'):
+            return self.get_cloned_voice_state(voice_name, sampling_time)
+
         if voice_name not in self.voices:
             print(f"Loading conditioning state for voice: {voice_name}...")
             # get_state_for_audio_prompt handles predefined voice names automatically
             self.voices[voice_name] = self.model.get_state_for_audio_prompt(voice_name)
         return self.voices[voice_name]
 
-    def generate(self, text, voice_name="eponine", output_path="output.wav"):
+    def get_cloned_voice_state(self, voice_audio_path, sampling_time=30.0):
+        """
+        Clone a voice from an audio file and return the state.
+        Includes logic to truncate the sample if it's longer than sampling_time.
+        """
+        cache_key = (str(voice_audio_path), sampling_time)
+        if cache_key in self.cloned_voices:
+            return self.cloned_voices[cache_key]
+
+        print(f"Cloning voice from: {voice_audio_path} (sampling_time: {sampling_time}s)...")
+        
+        final_path = voice_audio_path
+        temp_truncated_file = None
+
+        try:
+            # Check length and truncate if necessary
+            with wave.open(str(voice_audio_path), 'rb') as wav:
+                frames = wav.getnframes()
+                rate = wav.getframerate()
+                duration = frames / float(rate)
+                
+                if duration > sampling_time:
+                    print(f"Truncating audio from {duration:.2f}s to {sampling_time}s")
+                    # Create a temp file for the truncated audio
+                    fd, temp_truncated_file = tempfile.mkstemp(suffix=".wav")
+                    os.close(fd)
+                    
+                    with wave.open(temp_truncated_file, 'wb') as wav_out:
+                        wav_out.setparams(wav.getparams())
+                        n_frames = int(sampling_time * rate)
+                        wav_out.writeframes(wav.readframes(n_frames))
+                    final_path = temp_truncated_file
+                else:
+                    print(f"Audio duration {duration:.2f}s is within sampling_time {sampling_time}s. Using full audio.")
+
+            # Get the state for the (possibly truncated) audio
+            # Note: Pocket TTS internally truncates to 30s if truncate=True.
+            voice_state = self.model.get_state_for_audio_prompt(final_path, truncate=True)
+            self.cloned_voices[cache_key] = voice_state
+            
+            return voice_state
+
+        finally:
+            if temp_truncated_file and os.path.exists(temp_truncated_file):
+                try:
+                    os.remove(temp_truncated_file)
+                except:
+                    pass
+
+    def generate(self, text, voice_name="eponine", output_path="output.wav", sampling_time=30.0):
         """
         Generate speech from text and save to a WAV file.
         """
-        voice_state = self.get_voice_state(voice_name)
+        voice_state = self.get_voice_state(voice_name, sampling_time=sampling_time)
         
         print(f"Generating speech for: \"{text[:50]}{'...' if len(text) > 50 else ''}\"")
         # generate_audio returns a torch.Tensor [samples]
@@ -47,7 +104,7 @@ class TTSService:
         self.save_audio(audio, output_path)
         return output_path
 
-    def generate_stream(self, text, voice_name="eponine"):
+    def generate_stream(self, text, voice_name="eponine", sampling_time=30.0):
         """
         Generate speech as a stream of raw PCM 16-bit bytes with a WAV header.
         """
@@ -55,14 +112,14 @@ class TTSService:
         header = self.get_wav_header()
         yield header
 
-        for pcm_chunk in self.generate_pcm_stream(text, voice_name):
+        for pcm_chunk in self.generate_pcm_stream(text, voice_name, sampling_time=sampling_time):
             yield pcm_chunk
 
-    def generate_pcm_stream(self, text, voice_name="eponine"):
+    def generate_pcm_stream(self, text, voice_name="eponine", sampling_time=30.0):
         """
         Generate speech as a stream of raw PCM 16-bit bytes (no header).
         """
-        voice_state = self.get_voice_state(voice_name)
+        voice_state = self.get_voice_state(voice_name, sampling_time=sampling_time)
         
         print(f"Streaming PCM using voice '{voice_name}' for: \"{text[:50]}{'...' if len(text) > 50 else ''}\"")
         
@@ -129,8 +186,6 @@ if __name__ == "__main__":
     # test_text = "Hello! I am Eponine, a high-quality text to speech voice from Kyutai's Pocket T T S. I run completely locally on your C P U."
     test_text='''Hey its me - Panam. You think this city owns us? That its neon lights, its corporations, its endless hunger for power can break people like us?'''
     output_file = "test_eponine.wav"
-    
-
     
     start_time = time.time()
     service.generate(test_text, voice_name="eponine", output_path=output_file)

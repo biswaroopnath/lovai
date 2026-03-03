@@ -26,7 +26,8 @@ def get_character_paths():
         "name": char_name,
         "template": os.path.join(char_base, "default_template.txt"),
         "prompt": os.path.join(char_base, "prompt.txt"),
-        "payload": os.path.join(char_base, "payload.json")
+        "payload": os.path.join(char_base, "payload.json"),
+        "sample": os.path.join(char_base, "sample.wav")
     }
 
 def get_default_template():
