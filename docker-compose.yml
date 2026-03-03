@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # 1. KoboldCpp service for LLM (Large Language Model)
+  koboldcpp:
+    build:
+      context: .
+      dockerfile: koboldcpp.Dockerfile
+    ports:
+      - "5001:5001"
+    volumes:
+      # Map the host models directory to /models in the container
+      - ./models:/models
+    # Entrypoint command to run the model. Update the model filename as needed.
+    command: ./koboldcpp --model /models/MN-12B-Mag-Mell-R1.Q5_K_M.gguf --port 5001 --gpulayers 100
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # 2. Backend service for STT (Whisper), TTS (Pocket), and orchestration (FastAPI)
+  backend:
+    build:
+      context: .
+      dockerfile: backend.Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      # Tell the backend where to find the KoboldCpp service within the container network
+      - KOBOLD_BASE_URL=http://koboldcpp:5001
+    volumes:
+      # Root project components (character assets, configs, etc.)
+      - .:/app
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    # Backend depends on KoboldCpp to be running
+    depends_on:
+      - koboldcpp
+
+  # 3. Frontend service for the React (Vite) user interface
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    # Ensure backend starts first
+    depends_on:
+      - backend
+
+# Note: For GPU support on Windows/macOS, ensures Docker Desktop is configured with WSL2
+# and NVIDIA Container Toolkit is correctly installed.
