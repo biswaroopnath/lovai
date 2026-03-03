@@ -13,7 +13,9 @@ from pydantic import BaseModel
 from typing import Optional
 from tts_service import TTSService
 from faster_whisper import WhisperModel, BatchedInferencePipeline
-from history import reset_history, update_prompt, finalize_turn
+from history import reset_history, update_prompt, finalize_turn, get_config, get_character_paths
+
+# Configuration is now loaded dynamically via history.get_config()
 
 app = FastAPI()
 
@@ -59,7 +61,7 @@ class ChatRequest(BaseModel):
     prompt: str
     max_length: Optional[int] = 120
     temperature: Optional[float] = 0.7
-    voice: Optional[str] = "eponine"
+    voice: Optional[str] = None
 
 async def get_kobold_stream(payload):
     """Generator for streaming tokens from KoboldCpp with extra robustness."""
@@ -154,8 +156,10 @@ async def token_to_sentence_stream(token_generator):
 async def chat(request: ChatRequest):
     """Standard non-streaming chat proxy."""
     try:
-        payload_path = os.path.join(PROJECT_ROOT, "kobolcpp", "payload.txt")
-        prompt_path = os.path.join(BACKEND_DIR, "prompt.txt")
+        # Load dynamic paths
+        paths = get_character_paths()
+        payload_path = paths["payload"]
+        prompt_path = paths["prompt"]
 
         update_prompt(request.prompt)
 
@@ -183,7 +187,7 @@ async def chat(request: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/chat_voice")
-async def chat_voice(prompt: str, voice: str = "eponine", max_length: int = 120, temperature: float = 0.7):
+async def chat_voice(prompt: str, voice: Optional[str] = None, max_length: int = 120, temperature: float = 0.7):
     """
     Streaming LLM + TTS for instantaneous voice response.
     Returns a stream of raw audio data (WAV) as the LLM generates tokens.
@@ -193,8 +197,14 @@ async def chat_voice(prompt: str, voice: str = "eponine", max_length: int = 120,
         raise HTTPException(status_code=500, detail="TTSService not initialized")
 
     try:
-        payload_path = os.path.join(PROJECT_ROOT, "kobolcpp", "payload.txt")
-        prompt_path = os.path.join(BACKEND_DIR, "prompt.txt")
+        # Load dynamic paths and config
+        config = get_config()
+        paths = get_character_paths()
+        payload_path = paths["payload"]
+        prompt_path = paths["prompt"]
+
+        if voice is None:
+            voice = config.get("default_voice", "eponine")
 
         # Initialize history
         update_prompt(prompt)
@@ -268,13 +278,17 @@ async def chat_voice(prompt: str, voice: str = "eponine", max_length: int = 120,
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/tts")
-async def tts(text: str, voice: str = "eponine"):
+async def tts(text: str, voice: Optional[str] = None):
     """
     Pocket TTS endpoint.
     Processes text into speech using the TTSService.
     """
     if not tts_service:
         raise HTTPException(status_code=500, detail="TTSService not initialized")
+    
+    if voice is None:
+        config = get_config()
+        voice = config.get("default_voice", "eponine")
     
     try:
         # Create a temporary file for the audio
@@ -297,13 +311,17 @@ async def tts(text: str, voice: str = "eponine"):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/tts_stream")
-async def tts_stream(text: str, voice: str = "eponine"):
+async def tts_stream(text: str, voice: Optional[str] = None):
     """
     Pocket TTS streaming endpoint.
     Processes text into speech and streams audio chunks for low latency.
     """
     if not tts_service:
         raise HTTPException(status_code=500, detail="TTSService not initialized")
+    
+    if voice is None:
+        config = get_config()
+        voice = config.get("default_voice", "eponine")
     
     try:
         return StreamingResponse(

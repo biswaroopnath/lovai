@@ -95,7 +95,7 @@ function App() {
 
       // Use the unified streaming endpoint directly
       // This sends the prompt and starts receiving the audio stream immediately
-      const audioUrl = `${API_BASE}/chat_voice?prompt=${encodeURIComponent(text)}&voice=eponine&t=${Date.now()}`
+      const audioUrl = `${API_BASE}/chat_voice?prompt=${encodeURIComponent(text)}&t=${Date.now()}`
 
       console.log('Streaming from:', audioUrl)
       audioRef.current.pause()
@@ -138,7 +138,7 @@ function App() {
       setIsTalking(true)
       setStatus('Responding...')
 
-      const audioUrl = `${API_BASE}/tts_stream?text=${encodeURIComponent(text)}&voice=eponine&t=${Date.now()}`
+      const audioUrl = `${API_BASE}/tts_stream?text=${encodeURIComponent(text)}&t=${Date.now()}`
       audioRef.current.pause()
       audioRef.current.currentTime = 0
       audioRef.current.src = audioUrl
