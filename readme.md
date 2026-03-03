@@ -104,3 +104,8 @@ Feel free to open issues or submit pull requests for improvements, bug fixes, or
 - voice-cloning is available via pocket-tts
 - enabled streaming from both llm and tts service so that you don't have to wait for the whole response to be generated before it starts speaking. This gives the feel of low latency (Helpfull for large model llms where output takes time to generate)
 - can run only gguf models due to koboldcpp limitations
+- character chat history is stored in prompt.txt but refreshed with default template after ever app launch
+
+## Bugs
+
+- sometimes koboldcpp doenst stops, kill it manually via task manager.

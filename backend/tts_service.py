@@ -64,7 +64,7 @@ class TTSService:
         """
         voice_state = self.get_voice_state(voice_name)
         
-        print(f"Streaming PCM for: \"{text[:50]}{'...' if len(text) > 50 else ''}\"")
+        print(f"Streaming PCM using voice '{voice_name}' for: \"{text[:50]}{'...' if len(text) > 50 else ''}\"")
         
         chunk_count = 0
         for chunk in self.model.generate_audio_stream(voice_state, text):
