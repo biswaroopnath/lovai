@@ -3,6 +3,7 @@
 ## Overview
 
 A lightweight voice AI application that supports text‑to‑speech, voice cloning, and customizable character prompts.
+![Image of UI](app_screenshot.PNG)
 
 ## Prerequisites
 
@@ -65,6 +66,7 @@ Run the main batch script on a new terminal (without the venv activated) to star
 Edit `lovai_config.json` to change the below parameters:
 
 - `character_folder`: Folder containing the character's prompt, template, sample.wav(optional) and payload. All of these are in `character` folder.
+- `character_name`: Name of the character. This will be used in the prompt and template. hence must be same as in `prompt.txt` and `default_template.txt` and `payload.json`.
 - `voice_clone`: Set to `true` to enable voice cloning.
 - `sampling_time`: Time in seconds to sample the voice. If larger sample.wave file edit this parameter in seconds.
 - `default_voice`: Default voice to use. Available voices by **pocket-tts** (in-built) are: `eponine`, `alba`, `marius`, `javert`, `jean`, `fantine`, `cosette` and `azelma`.

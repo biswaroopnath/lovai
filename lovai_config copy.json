@@ -1,9 +1,8 @@
 {
-    "character_folder": "firefly",
-    "character_name": "Firefly",
+    "character_folder": "panam",
     "voice_clone": false,
     "sampling_time": 60,
-    "default_voice": "alba",
+    "default_voice": "eponine",
     "gpu_layers": 100,
     "model": "MN-12B-Mag-Mell-R1.Q5_K_M.gguf"
 }

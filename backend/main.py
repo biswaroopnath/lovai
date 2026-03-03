@@ -13,20 +13,9 @@ from pydantic import BaseModel
 from typing import Optional
 from tts_service import TTSService
 from faster_whisper import WhisperModel, BatchedInferencePipeline
-from history import reset_history, update_prompt, finalize_turn
+from history import reset_history, update_prompt, finalize_turn, get_config, get_character_paths
 
-# Load Configuration
-CONFIG_PATH = os.path.join(PROJECT_ROOT, "lovai_config.json")
-try:
-    with open(CONFIG_PATH, "r") as f:
-        config = json.load(f)
-except Exception as e:
-    print(f"Warning: Could not load config from {CONFIG_PATH}: {e}")
-    config = {}
-
-CHARACTER_FOLDER = config.get("character_folder", "panam")
-DEFAULT_VOICE = config.get("default_voice", "eponine")
-VOICE_CLONE = config.get("voice_clone", False)
+# Configuration is now loaded dynamically via history.get_config()
 
 app = FastAPI()
 
@@ -72,7 +61,7 @@ class ChatRequest(BaseModel):
     prompt: str
     max_length: Optional[int] = 120
     temperature: Optional[float] = 0.7
-    voice: Optional[str] = DEFAULT_VOICE
+    voice: Optional[str] = None
 
 async def get_kobold_stream(payload):
     """Generator for streaming tokens from KoboldCpp with extra robustness."""
@@ -167,10 +156,10 @@ async def token_to_sentence_stream(token_generator):
 async def chat(request: ChatRequest):
     """Standard non-streaming chat proxy."""
     try:
-        # Load character-specific payload 
-        payload_path = os.path.join(PROJECT_ROOT, "character", CHARACTER_FOLDER, "payload.json")
-       
-        prompt_path = os.path.join(PROJECT_ROOT, "character", CHARACTER_FOLDER, "prompt.txt")
+        # Load dynamic paths
+        paths = get_character_paths()
+        payload_path = paths["payload"]
+        prompt_path = paths["prompt"]
 
         update_prompt(request.prompt)
 
@@ -198,7 +187,7 @@ async def chat(request: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/chat_voice")
-async def chat_voice(prompt: str, voice: str = DEFAULT_VOICE, max_length: int = 120, temperature: float = 0.7):
+async def chat_voice(prompt: str, voice: Optional[str] = None, max_length: int = 120, temperature: float = 0.7):
     """
     Streaming LLM + TTS for instantaneous voice response.
     Returns a stream of raw audio data (WAV) as the LLM generates tokens.
@@ -208,10 +197,14 @@ async def chat_voice(prompt: str, voice: str = DEFAULT_VOICE, max_length: int = 
         raise HTTPException(status_code=500, detail="TTSService not initialized")
 
     try:
-        # Load character-specific payload if exists, otherwise fallback
-        payload_path = os.path.join(PROJECT_ROOT, "character", CHARACTER_FOLDER, "payload.json")
-        
-        prompt_path = os.path.join(PROJECT_ROOT, "character", CHARACTER_FOLDER, "prompt.txt")
+        # Load dynamic paths and config
+        config = get_config()
+        paths = get_character_paths()
+        payload_path = paths["payload"]
+        prompt_path = paths["prompt"]
+
+        if voice is None:
+            voice = config.get("default_voice", "eponine")
 
         # Initialize history
         update_prompt(prompt)
@@ -285,13 +278,17 @@ async def chat_voice(prompt: str, voice: str = DEFAULT_VOICE, max_length: int = 
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/tts")
-async def tts(text: str, voice: str = DEFAULT_VOICE):
+async def tts(text: str, voice: Optional[str] = None):
     """
     Pocket TTS endpoint.
     Processes text into speech using the TTSService.
     """
     if not tts_service:
         raise HTTPException(status_code=500, detail="TTSService not initialized")
+    
+    if voice is None:
+        config = get_config()
+        voice = config.get("default_voice", "eponine")
     
     try:
         # Create a temporary file for the audio
@@ -314,13 +311,17 @@ async def tts(text: str, voice: str = DEFAULT_VOICE):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/tts_stream")
-async def tts_stream(text: str, voice: str = DEFAULT_VOICE):
+async def tts_stream(text: str, voice: Optional[str] = None):
     """
     Pocket TTS streaming endpoint.
     Processes text into speech and streams audio chunks for low latency.
     """
     if not tts_service:
         raise HTTPException(status_code=500, detail="TTSService not initialized")
+    
+    if voice is None:
+        config = get_config()
+        voice = config.get("default_voice", "eponine")
     
     try:
         return StreamingResponse(
