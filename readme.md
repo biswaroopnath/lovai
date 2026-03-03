@@ -88,24 +88,21 @@ Edit `lovai_config.json` to change the below parameters:
 
 Feel free to open issues or submit pull requests for improvements, bug fixes, or new features.
 
-## Architechture
+## Architecture
 
-- uses fastwishper large model for stt (gpu - accelerated)
-- uses koboldcpp as backend for llm token streaming (gpu - accelerated if available)
-- uses streamed data to generate tts using pocket-tts (runs on cpu)
+- **STT**: Uses Faster-Whisper (Large) for GPU-accelerated speech-to-text.
+- **LLM Backend**: Powered by KoboldCpp for high-performance token streaming (GPU-accelerated if available).
+- **TTS**: Employs pocket-tts (CPU-based) to generate audio from streamed LLM data.
 
 ## Features
 
-- model can be changed easily
-- can be run on low-end gpu
-- can be run on cpu only (slower)
-- can be run on gpu + cpu (fastest)
-- can use custom character templates for character personality
-- voice-cloning is available via pocket-tts
-- enabled streaming from both llm and tts service so that you don't have to wait for the whole response to be generated before it starts speaking. This gives the feel of low latency (Helpfull for large model llms where output takes time to generate)
-- can run only gguf models due to koboldcpp limitations
-- character chat history is stored in prompt.txt but refreshed with default template after ever app launch
+- **Hardware Versatility**: Optimized for low-end GPUs, CPU-only execution, or hybrid (GPU + CPU) setups.
+- **Low Latency Streaming**: Simultaneous LLM and TTS streaming ensures audio playback begins before the full response is generated.
+- **Model Flexibility**: Easily swap any GGUF-compatible models.
+- **Character Customization**: Define unique personalities and response styles using custom templates.
+- **Voice Cloning**: Built-in support for voice cloning via pocket-tts.
+- **Context Management**: Chat history is maintained in `prompt.txt` and reset to the default template on each application launch.
 
-## Bugs
+## Known Issues
 
-- sometimes koboldcpp doenst stops, kill it manually via task manager.
+- **Process Termination**: KoboldCpp may occasionally fail to exit automatically; if so, please terminate it manually via Task Manager.
