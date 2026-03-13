@@ -28,6 +28,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+async def root():
+    return {"status": "online", "message": "Voice AI Backend is running"}
+
 # Initialize Pocket TTS Service
 device = 'cpu'
 print(f"Initializing Pocket TTS Service on {device}...")
