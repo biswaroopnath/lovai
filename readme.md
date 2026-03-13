@@ -10,7 +10,7 @@ A lightweight voice AI application that supports text‑to‑speech, voice cloni
 Currently tested on Windows 10.
 
 - **Python 3.11**
-- **KoboldCpp**: Download v1.108.2 from [GitHub](https://github.com/LostRuins/koboldcpp/releases/tag/v1.108.2) and place the `.exe` in the `kobolcpp/` folder.
+- **KoboldCpp**: Download v1.108.2 from [GitHub](https://github.com/LostRuins/koboldcpp/releases/tag/v1.108.2) and place the `.exe` in the `koboldcpp/` folder.
 - **Node.js v24.11.0**
 - **npm v11.6.1**
 - **Git v2.51.2.windows.1**

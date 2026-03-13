@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 const API_BASE = 'http://localhost:8001'
 
 function App() {
-  const [isMuted, setIsMuted] = useState(false)
+  const [autoReplyEnabled, setAutoReplyEnabled] = useState(true)
   const [isListening, setIsListening] = useState(false)
   const [isTalking, setIsTalking] = useState(false)
   const [status, setStatus] = useState('Idle')
@@ -17,6 +17,40 @@ function App() {
 
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
+  const autoReplyTimerRef = useRef(null)
+
+  // Function to reset the auto-reply timer
+  const resetAutoReplyTimer = () => {
+    if (autoReplyTimerRef.current) {
+      clearTimeout(autoReplyTimerRef.current)
+    }
+
+    if (autoReplyEnabled && !isListening && !isTalking) {
+      // Random duration between 5s and 120s (2 min)
+      const duration = Math.floor(Math.random() * (120000 - 5000 + 1)) + 5000
+      console.log(`Next auto-reply in ${duration / 1000}s`)
+      autoReplyTimerRef.current = setTimeout(() => {
+        if (autoReplyEnabled && !isListening && !isTalking) {
+          console.log("Triggering auto-reply (empty prompt)")
+          handleChat('')
+        }
+      }, duration)
+    }
+  }
+
+  // Handle auto-reply timer on state changes
+  useEffect(() => {
+    if (autoReplyEnabled && !isListening && !isTalking) {
+      resetAutoReplyTimer()
+    } else {
+      if (autoReplyTimerRef.current) {
+        clearTimeout(autoReplyTimerRef.current)
+      }
+    }
+    return () => {
+      if (autoReplyTimerRef.current) clearTimeout(autoReplyTimerRef.current)
+    }
+  }, [autoReplyEnabled, isListening, isTalking])
 
   // Initialize MediaRecorder for Voice Input
   useEffect(() => {
@@ -84,11 +118,6 @@ function App() {
   }
 
   const handleChat = (text) => {
-    if (isMuted) {
-      // Fallback if muted, though we should probably still handle history
-      return
-    }
-
     try {
       setStatus('Prompting...')
       setIsTalking(true)
@@ -169,12 +198,8 @@ function App() {
     }
   }
 
-  const toggleMute = () => {
-    setIsMuted(!isMuted)
-    if (!isMuted) {
-      audioRef.current.pause()
-      setIsTalking(false)
-    }
+  const toggleAutoReply = () => {
+    setAutoReplyEnabled(!autoReplyEnabled)
   }
 
 
@@ -234,12 +259,12 @@ function App() {
 
       <div className="controls">
         <button
-          className={`btn btn-mute ${isMuted ? 'muted' : ''}`}
-          onClick={toggleMute}
-          title={isMuted ? 'Unmute' : 'Mute Sound'}
+          className={`btn btn-mute ${!autoReplyEnabled ? 'muted' : ''}`}
+          onClick={toggleAutoReply}
+          title={autoReplyEnabled ? 'Turn Off Auto-Reply' : 'Turn On Auto-Reply'}
         >
-          {isMuted ? <VolumeX /> : <Volume2 />}
-          {isMuted ? 'Sound Off' : 'Mute'}
+          {autoReplyEnabled ? <Volume2 /> : <VolumeX />}
+          {autoReplyEnabled ? 'Auto-Reply ON' : 'Auto-Reply OFF'}
         </button>
 
         <button
